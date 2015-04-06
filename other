@@ -1,0 +1,22 @@
+create table trainuser_new(
+ id int(11) NOT NULL AUTO_INCREMENT,
+ userid varchar(20) NOT NULL,
+ itemid varchar(20) NOT NULL,
+ behbrowse int(1) NOT NULL,
+ behcollect int(1) NOT NULL,
+ behcart int(1) NOT NULL,
+ behbuy int(1) NOT NULL,
+ usergeohash varchar(11) DEFAULT NULL,
+ itemcategory varchar(11) NOT NULL,
+ oritime varchar(13) NOT NULL,
+ pytime date NOT NULL,
+ hour varchar(2) NOT NULL,
+ PRIMARY KEY (id)
+);
+
+create index index_item_id on trainuser_sampledata (itemid);
+
+posnum = 120236
+negnum = 12192306
+
+
