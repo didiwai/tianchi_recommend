@@ -196,12 +196,20 @@ def createTrainData():
 					fwtrain.write(row)
 
 def createTestData():
+	predictItemList = dict()
+	with open("tianchi_mobile_recommend_train_item.csv", "r") as f:
+		next(f)
+		for line in f:
+			line = line.strip().split(',')
+			item = line[0]
+			if item not in predictItemList:
+				predictItemList[item] = 1
 	with open("offline_test_data.csv", "w") as fwtest:
 		with open("tianchi_mobile_recommend_train_user.csv", "r") as f:
 			for row in f.readlines():
 				line = row.strip().split(',')
 				datatime = line[5].split(' ')[0]
-				if datatime == '2014-12-18':
+				if datatime == '2014-12-18' and line[1] in predictItemList:
 					if int(line[2]) == 4:
 						fwtest.write(line[0]+","+line[1]+",1\n")
 					else:
@@ -214,16 +222,17 @@ def createToBePredictedData():
 		for line in f:
 			line = line.strip().split(',')
 			preditemlist[line[0]] = 0
-
 	with open("online_tobepredicted_data.csv", "w") as fw:
 		predictuseritem = dict()
 		with open("tianchi_mobile_recommend_train_user.csv", "r") as f:
-			for row in f.readlines():
+			next(f)
+			for row in f:
 				row = row.strip().split(',')
 				node = row[0]+","+row[1]
 				if row[1] in preditemlist and node not in predictuseritem:
 					predictuseritem[node] = 0
 					fw.write(node+"\n")
+
 
 def createItemList():
 	itemlist = dict()
@@ -250,6 +259,28 @@ def createUserList():
 def sampleData():
 	poslist = list()
 	neglist = list()
+	'''
+	predictItemList = dict()
+	with open("tianchi_mobile_recommend_train_item.csv", "r") as f:
+		next(f)
+		for line in f:
+			line = line.strip().split(',')
+			item = line[0]
+			if item not in predictItemList:
+				predictItemList[item] = 1
+	with open("tianchi_mobile_recommend_train_user.csv", "r") as f:
+		next(f)
+		for line in f:
+			row = line.strip().split(',')
+			pydate = row[5].split(' ')[0]
+			if pydate == '2014-12-12':
+				continue
+			if row[1] in predictItemList:
+				if int(row[2]) == 4:
+					poslist.append(line)
+				else:
+					neglist.append(line)
+	'''
 	with open("tianchi_mobile_recommend_train_user.csv", "r") as f:
 		next(f)
 		for line in f:
@@ -262,10 +293,13 @@ def sampleData():
 			else:
 				neglist.append(line)
 	print "end create pos and neg list"
-	X_train, newneglist = cross_validation.train_test_split(neglist, test_size=0.14, random_state=0)
+	print len(poslist)
+	print len(neglist)
+	X_train, newneglist = cross_validation.train_test_split(neglist, test_size=0.04, random_state=0)
+	print len(newneglist)
 	with open("train_data.csv", "w") as fw:
 		for num, n in enumerate(newneglist):
-			if num % 10 == 0 and len(poslist) != 0:
+			if num % 4 == 0 and len(poslist) != 0:
 				temp = poslist.pop()
 				fw.write(temp)
 			fw.write(n)
@@ -273,4 +307,5 @@ def sampleData():
 
 
 if __name__ == "__main__":
-	csvToMysql()
+	sampleData()
+	createTrainData()
