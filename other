@@ -19,4 +19,11 @@ create index index_item_id on trainuser_sampledata (itemid);
 posnum = 120236
 negnum = 12192306
 
+prediction set num: 166.0
+reference set num: 473.0
+interact num: 17.0
+precision is: 0.102409638554
+recall is: 0.0359408033827
+f1 is: 0.0532081377152
+
 
