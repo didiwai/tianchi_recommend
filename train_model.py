@@ -66,6 +66,7 @@ def genUserFeature(train):
 
 def genItemFeature(train):
 	itemfeat = dict()
+	print "begin item feature"
 	#read feature from item feature file
 	filename = ""
 	if train:
@@ -76,6 +77,7 @@ def genItemFeature(train):
 		for row in f.readlines():
 			row = row.strip().split(',')
 			itemfeat[row[0]] = [int(i) for i in row[1:]]
+	print "end item feature"
 	'''
 	itemlist = list()
 	with open("item.txt", "r") as f:
@@ -167,13 +169,8 @@ def genItemFeature(train):
 	'''
 	return itemfeat
 
-def createItemFeatureToFile(train):
-	itemfeat = dict()
-	itemlist = list()
-	with open("item.txt", "r") as f:
-		for row in f.readlines():
-			row = row.strip()
-			itemlist.append(row)
+def genUserItemCombineFeature(train, user, item):
+	useritemlist = list()
 	timelist = list()
 	start_date = dt.date(2014, 11, 18)
 	end_date = dt.date(2014, 12, 19)
@@ -188,46 +185,29 @@ def createItemFeatureToFile(train):
 
 	if train:
 		query = ("SELECT pytime,sum(behbrowse),sum(behcollect),sum(behcart),sum(behbuy) FROM trainuser_new "
-         "WHERE itemid='%s' group by pytime")
+         "WHERE userid=%s and itemid=%s group by pytime")
 	else:
 		query = ("SELECT pytime,sum(behbrowse),sum(behcollect),sum(behcart),sum(behbuy) FROM trainuser_new "
-         "WHERE itemid='%s' and pytime<>'2014-12-18' group by pytime")
+         "WHERE userid=%s and itemid=%s and pytime<>'2014-12-18' group by pytime")
 
-	for num, item in enumerate(itemlist):
-		if num % 1000 == 0:
-			print num
-		tempitemfeat = dict()
-		cursor.execute(query % item)
+	tempitemfeat = dict()
+	data = (user, item)
+	cursor.execute(query , data)
+	for row in cursor:
+		tempitemfeat[row[0]] = list()
+		tempitemfeat[row[0]].append(int(row[1]))
+		tempitemfeat[row[0]].append(int(row[2]))
+		tempitemfeat[row[0]].append(int(row[3]))
+		tempitemfeat[row[0]].append(int(row[4]))
 
-		for row in cursor:
-			tempitemfeat[row[0]] = list()
-			tempitemfeat[row[0]].append(int(row[1]))
-			tempitemfeat[row[0]].append(int(row[2]))
-			tempitemfeat[row[0]].append(int(row[3]))
-			tempitemfeat[row[0]].append(int(row[4]))
-
-		tempaddition = [0,0,0,0]
-		for t in tempitemfeat:
-			tempaddition = [sum(x) for x in zip(tempaddition, tempitemfeat[t])]
-
-		for i in timelist:
-			if i in tempitemfeat:
-				itemfeat.setdefault(item, []).extend(tempitemfeat[i])
-			else:
-				itemfeat.setdefault(item, []).extend([0,0,0,0])
-		itemfeat[item].extend(tempaddition)
-	print "end item feature"
+	for i in timelist:
+		if i in tempitemfeat:
+			useritemlist.extend(tempitemfeat[i])
+		else:
+			useritemlist.extend([0,0,0,0])
 	cursor.close()
 	cnx.close()
-	filename = ""
-	if train:
-		filename = "train_item_feature.csv"
-	else:
-		filename = "test_item_feature.csv"
-	with open(filename, "w") as fw:
-		for key in itemfeat:
-			templist = [str(i) for i in itemfeat[key]]
-			fw.write(key+","+",".join(templist)+"\n")
+	return useritemlist
 
 def computePrecisionAndRecall(fpname, frname):
 	predicttionset = dict()
@@ -283,6 +263,8 @@ def trainModel(train=True):
 			trainlist = list()
 			trainlist.extend(userfeat[row[0]])
 			trainlist.extend(itemfeat[row[1]])
+			useritemfeat = genUserItemCombineFeature(train,row[0],row[1])
+			trainlist.extend(useritemfeat)
 			X_train.append(trainlist)
 			if posorneg == 4:
 				y_train.append(1)
@@ -317,11 +299,13 @@ def trainModel(train=True):
 				testlist = list()
 				testlist.extend(userfeat[row[0]])
 				testlist.extend(itemfeat[row[1]])
+				useritemfeat = genUserItemCombineFeature(train,row[0],row[1])
+				testlist.extend(useritemfeat)
 				pred_label = clf.predict(testlist)[0]
 				'''
 				pred_pos = clf.predict_proba(testlist)[:,1]
 				pred_label = 1
-				if pred_pos < 0.4:
+				if pred_pos < 0.7:
 					pred_label = 0
 				'''
 				fw.write(row[0]+","+row[1]+","+str(pred_label)+"\n")
@@ -340,12 +324,10 @@ def predictDataToSubmitData():
 					fw.write(line[0]+","+line[1]+"\n")
 
 if __name__ == "__main__":
-	'''
 	train = False
 	trainModel(train)
 	if train:
 		predictDataToSubmitData()
 	#computePrecisionAndRecall("offline_predict_data.txt", "offline_test_data.csv")
-	'''
-	createItemFeatureToFile(False)
-
+	#createItemFeatureToFile(False)
+	#genUserItemCombineFeature(False,'87847652','3')

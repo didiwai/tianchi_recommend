@@ -19,4 +19,11 @@ create index index_item_id on trainuser_sampledata (itemid);
 posnum = 120236
 negnum = 12192306
 
+no date 12-12
+posnum = 105087
+negnum = 11501283
+
+LR 
+user feature: 31*4+4 
+item feature: 4
 
