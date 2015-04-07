@@ -19,6 +19,7 @@ create index index_item_id on trainuser_sampledata (itemid);
 posnum = 120236
 negnum = 12192306
 
+<<<<<<< HEAD
 prediction set num: 166.0
 reference set num: 473.0
 interact num: 17.0
@@ -26,4 +27,13 @@ precision is: 0.102409638554
 recall is: 0.0359408033827
 f1 is: 0.0532081377152
 
+=======
+no date 12-12
+posnum = 105087
+negnum = 11501283
+
+LR 
+user feature: 31*4+4 
+item feature: 4
+>>>>>>> b68bee6a7e6095fe12c5a158a0c649c6626c588b
 
