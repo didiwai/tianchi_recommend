@@ -1,7 +1,8 @@
-create table trainuser_new(
+create table trainuser_sample(
  id int(11) NOT NULL AUTO_INCREMENT,
  userid varchar(20) NOT NULL,
  itemid varchar(20) NOT NULL,
+ behavior int(1) NOT NULL,
  behbrowse int(1) NOT NULL,
  behcollect int(1) NOT NULL,
  behcart int(1) NOT NULL,

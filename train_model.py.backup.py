@@ -29,10 +29,10 @@ def genUserFeature(train):
 	cursor = cnx.cursor()
 
 	if train:
-		query = ("SELECT pytime,sum(behbrowse),sum(behcollect),sum(behcart),sum(behbuy) FROM trainuser_new "
+		query = ("SELECT pytime,sum(behbrowse),sum(behcollect),sum(behcart),sum(behbuy) FROM trainuser_all "
          "WHERE userid='%s' group by pytime")
 	else:
-		query = ("SELECT pytime,sum(behbrowse),sum(behcollect),sum(behcart),sum(behbuy) FROM trainuser_new "
+		query = ("SELECT pytime,sum(behbrowse),sum(behcollect),sum(behcart),sum(behbuy) FROM trainuser_all "
          "WHERE userid='%s' and pytime<>'2014-12-18' group by pytime")
 
 	for num, user in enumerate(userlist):
@@ -63,9 +63,10 @@ def genUserFeature(train):
 	cnx.close()
 	print "end user feature"
 	return userfeat
-
+'''
 def genItemFeature(train):
 	itemfeat = dict()
+	'''
 	'''
 	print "begin item feature"
 	#read feature from item feature file
@@ -107,7 +108,7 @@ def genItemFeature(train):
 	cnx.close()
 	print "end item feature"
 	'''
-	
+	'''
 	if train:
 		itemlist = list()
 		with open("item.txt", "r") as f:
@@ -166,9 +167,12 @@ def genItemFeature(train):
 				itemfeat[row[0]] = [int(i) for i in row[1:]]
 		print "end item feature"
 	return itemfeat
-
-def genUserItemCombineFeature(train, useritempair):
-	useritemfeat = dict()
+'''
+def genItemFeature(train, itempair):
+	itemfeat = dict()
+	#item feature like the user feature, everyday has 4 feature and also have a
+	#addition feature
+	print "begin item fearure"
 	timelist = list()
 	start_date = dt.date(2014, 11, 18)
 	end_date = dt.date(2014, 12, 19)
@@ -181,11 +185,62 @@ def genUserItemCombineFeature(train, useritempair):
 	cursor = cnx.cursor()
 	if train:
 		query = ("SELECT pytime,sum(behbrowse),sum(behcollect),sum(behcart),sum(behbuy) FROM trainuser_new "
-         "WHERE userid=%s and itemid=%s group by pytime")
+           "WHERE itemid='%s' group by pytime")
 	else:
 		query = ("SELECT pytime,sum(behbrowse),sum(behcollect),sum(behcart),sum(behbuy) FROM trainuser_new "
+     "WHERE itemid='%s' and pytime<>'2014-12-18' group by pytime")
+	
+	num = 0
+	for item in itempair:
+		if num % 1000 == 0:
+			print num
+		num += 1
+		tempitemfeat = dict()
+		cursor.execute(query % item)
+		for row in cursor:
+			tempitemfeat[row[0]] = list()
+			tempitemfeat[row[0]].append(int(row[1]))
+			tempitemfeat[row[0]].append(int(row[2]))
+			tempitemfeat[row[0]].append(int(row[3]))
+			tempitemfeat[row[0]].append(int(row[4]))
+		tempaddition = [0,0,0,0]
+		for t in tempitemfeat:
+			tempaddition = [sum(x) for x in zip(tempaddition, tempitemfeat[t])]
+		for i in timelist:
+			if i in tempitemfeat:
+				itemfeat.setdefault(item, []).extend(tempitemfeat[i])
+			else:
+				itemfeat.setdefault(item, []).extend([0,0,0,0])
+		itemfeat[item].extend(tempaddition)
+	print "end item feature"
+	cursor.close()
+	cnx.close()
+	return itemfeat
+
+def genUserItemCombineFeature(train, useritempair):
+	print "begin user_item feature"
+	useritemfeat = dict()
+	timelist = list()
+	start_date = dt.date(2014, 11, 18)
+	end_date = dt.date(2014, 12, 19)
+	if not train:
+		end_date = dt.date(2014, 12, 18)
+	while start_date < end_date:
+		timelist.append(start_date)
+		start_date = start_date + dt.timedelta(days=1)
+	cnx = mysql.connector.connect(user='root', password='1234', database='tianchi')
+	cursor = cnx.cursor()
+	if train:
+		query = ("SELECT pytime,sum(behbrowse),sum(behcollect),sum(behcart),sum(behbuy) FROM trainuser_all "
+         "WHERE userid=%s and itemid=%s group by pytime")
+	else:
+		query = ("SELECT pytime,sum(behbrowse),sum(behcollect),sum(behcart),sum(behbuy) FROM trainuser_all "
          "WHERE userid=%s and itemid=%s and pytime<>'2014-12-18' group by pytime")
+	num = 0
 	for key in useritempair:
+		if num % 10000 == 0:
+			print num
+		num += 1
 		useritem  = key.split('_')
 		user = useritem[0]; item = useritem[1]
 		tempfeat = dict()
@@ -204,6 +259,7 @@ def genUserItemCombineFeature(train, useritempair):
 				useritemfeat.setdefault(key, []).extend([0,0,0,0])
 	cursor.close()
 	cnx.close()
+	print "end user_item feature"
 	return useritemfeat
 
 def computePrecisionAndRecall(fpname, frname):
@@ -240,26 +296,42 @@ def computePrecisionAndRecall(fpname, frname):
 	print "f1 is: " + str(f1)
 
 def trainModel(train=True):
-	userfeat = genUserFeature(train)
-	itemfeat = genItemFeature(train)
+	#itemfeat = genItemFeature(train)
 	print "begin gen train data"
 	filename = ""
+	topredictfilename = ""
 	if train:
 		filename = "train_data.csv"
+		topredictfilename = "online_tobepredicted_data.csv"
 	else:
 		filename = "offline_train_data.csv"
+		topredictfilename = "offline_test_data.csv"
 	X_train = list()
 	y_train = list()
 	
 	print "begin gen user item feature"
+	userfeat = genUserFeature(train)
 	useritempair = dict()
+	itempair = dict()
 	with open(filename, "r") as fui:
 		for row in fui.readlines():
 			row= row.strip().split(',')
 			node = row[0]+"_"+row[1]
 			if node not in useritempair:
 				useritempair[node] = 1
+			if row[1] not in itempair:
+				itempair[row[1]] = 1
+	#gen predict datas
+	with open(topredictfilename, "r") as fui:
+		for row in fui.readlines():
+			row = row.strip().split(',')
+			node = row[0]+"_"+row[1]
+			if node not in useritempair:
+				useritempair[node] = 1
+			if row[1] not in itempair:
+				itempair[row[1]] = 1
 	useritemfeat = genUserItemCombineFeature(train, useritempair)
+	itemfeat = genItemFeature(train, itempair)
 	print "end gen user item feature"
 
 	with open(filename, "r") as f:
@@ -279,8 +351,8 @@ def trainModel(train=True):
 	print "end gen train data"
 	
 	print "begin train model"
-	#clf = LogisticRegression()
-	clf = RandomForestClassifier(max_depth=10)
+	clf = LogisticRegression()
+	#clf = RandomForestClassifier(max_depth=10)
 	clf = clf.fit(X_train, y_train)
 	print "end train model"
 
@@ -294,16 +366,6 @@ def trainModel(train=True):
 		#offline test
 		fwname = "offline_predict_data.txt"
 		frname = "offline_test_data.csv"
-	print "begin gen user item feature"
-	useritempair = dict()
-	with open(frname, "r") as fui:
-		for row in fui.readlines():
-			row = row.strip().split(',')
-			node = row[0]+"_"+row[1]
-			if node not in useritempair:
-				useritempair[node] = 1
-	useritemfeat = genUserItemCombineFeature(train, useritempair)
-	print "end gen user item feature"
 
 	print "begin predict"
 	with open(fwname, "w") as fw:
@@ -326,7 +388,6 @@ def trainModel(train=True):
 				'''
 				fw.write(row[0]+","+row[1]+","+str(pred_label)+"\n")
 	print "end predict"
-
 	if not train:
 		computePrecisionAndRecall("offline_predict_data.txt", "offline_test_data.csv")
 
@@ -340,11 +401,9 @@ def predictDataToSubmitData():
 					fw.write(line[0]+","+line[1]+"\n")
 
 if __name__ == "__main__":
-	'''
 	train = False
 	trainModel(train)
 	if train:
 		predictDataToSubmitData()
-	'''
-	computePrecisionAndRecall("offline_predict_data.txt", "offline_test_data.csv")
+	#computePrecisionAndRecall("offline_predict_data.txt", "offline_test_data.csv")
 	#createItemFeatureToFile(False)
