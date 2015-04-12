@@ -38,3 +38,17 @@ user feature: 31*4+4
 item feature: 4
 >>>>>>> b68bee6a7e6095fe12c5a158a0c649c6626c588b
 
+
+
+create table trainuser_all(
+ id int(11) NOT NULL AUTO_INCREMENT,
+ userid varchar(20) NOT NULL,
+ itemid varchar(20) NOT NULL,
+ behavior int(1) NOT NULL,
+ usergeohash varchar(11) DEFAULT NULL,
+ itemcategory varchar(11) NOT NULL,
+ oritime varchar(13) NOT NULL,
+ pytime date NOT NULL,
+ hour varchar(2) NOT NULL,
+ PRIMARY KEY (id)
+);
