@@ -155,6 +155,7 @@ def createTestData(isSample=True):
 		for i in endlist:
 			fw.write(i+"\n")
 
+'''
 def createToBePredictedData():
 	preditemlist = dict()
 	with open("tianchi_mobile_recommend_train_item.csv", "r") as f:
@@ -178,6 +179,36 @@ def createToBePredictedData():
 					userbuylist[node] = 1
 				if row[1] in preditemlist and node not in predictuseritem:
 					predictuseritem[node] = 1
+	useritem = list()
+	for node in predictuseritem:
+		if node not in userbuylist:
+			useritem.append(node)
+	shuffle(useritem)
+	with open("online_test_data.csv", "w") as fw:
+		for node in useritem:
+			fw.write(node+"\n")
+'''
+
+
+def createToBePredictedData():
+	preditemlist = dict()
+	with open("tianchi_mobile_recommend_train_item.csv", "r") as f:
+		next(f)
+		for line in f:
+			line = line.strip().split(',')
+			preditemlist[line[0]] = 0
+	
+	userbuylist = dict()
+	predictuseritem = dict()
+	with open("tianchi_mobile_recommend_train_user.csv", "r") as f:
+		next(f)
+		for row in f:
+			row = row.strip().split(',')
+			node = row[0]+","+row[1]
+			if int(row[2]) == 4:
+				userbuylist[node] = 1
+			if row[1] in preditemlist and node not in predictuseritem:
+				predictuseritem[node] = 1
 	useritem = list()
 	for node in predictuseritem:
 		if node not in userbuylist:
@@ -247,6 +278,6 @@ def sampleData():
 
 if __name__ == "__main__":
 	#createTrainData('offline_train_data.csv', '2014-12-17')
-	createTrainData('online_train_data.csv', '2014-12-18')
+	#createTrainData('online_train_data.csv', '2014-12-18')
 	#createTestData(False)
-	#createToBePredictedData()
+	createToBePredictedData()
