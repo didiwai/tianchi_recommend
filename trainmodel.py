@@ -140,17 +140,17 @@ def genFeature(user, item, end_date, timelist, cursor):
 
 
 def trainModel(train=True):
-	end_date = datetime.date(2014, 12, 18)
+	end_date = datetime.date(2014, 12, 17)
 	filename = ""
 	if train:
 		filename = "online_train_data.csv"
 	else:
 		filename = "offline_train_data.csv"
-		end_date = datetime.date(2014, 12, 17)
+		end_date = datetime.date(2014, 12, 16)
 	X_train = list()
 	y_train = list()
 	timelist = list()
-	time_to_subtract = [1,3,7,15,30]
+	time_to_subtract = [0,2,6,14,30]
 	for t in time_to_subtract:
 		temp_date = end_date - datetime.timedelta(days=t)
 		timelist.append(temp_date)
@@ -162,7 +162,7 @@ def trainModel(train=True):
 	trainstarttime = time.time()
 	number = 0
 	with open(filename, "r") as f:
-		for row in f.readlines():
+		for row in f:
 			if number % 1000 == 0:
 				print number
 			number += 1
@@ -186,7 +186,7 @@ def trainModel(train=True):
 	print "end train model"
 
 
-	end_date = datetime.date(2014, 12, 19)
+	end_date = datetime.date(2014, 12, 18)
 	fwname = ""
 	frname = ""
 	if train:
@@ -197,9 +197,10 @@ def trainModel(train=True):
 		#offline test
 		fwname = "offline_predict_data.txt"
 		frname = "offline_test_data_in_p.csv"
-		end_date = datetime.date(2014, 12, 18)
+		end_date = datetime.date(2014, 12, 17)
 	timelist = list()
-	time_to_subtract = [1,3,7,15,30]
+	#time_to_subtract = [1,3,7,15,30]
+	time_to_subtract = [0,2,6,14,30]
 	for t in time_to_subtract:
 		temp_date = end_date - datetime.timedelta(days=t)
 		timelist.append(temp_date)
@@ -209,7 +210,7 @@ def trainModel(train=True):
 	with open(fwname, "w") as fw:
 		number = 0
 		with open(frname, "r") as f:
-			for row in f.readlines():
+			for row in f:
 				if number % 1000 == 0:
 					print number
 				number += 1
@@ -243,9 +244,32 @@ def predictDataToSubmitData():
 					fw.write(line[0]+","+line[1]+"\n")
 
 if __name__ == "__main__":
-	train = True
+	'''
+	train = False
 	trainModel(train)
 	if train:
 		predictDataToSubmitData()
 	#computePrecisionAndRecall("offline_predict_data.txt", "offline_test_data.csv")
 	#createItemFeatureToFile(False)
+	'''
+	'''
+	cnx = mysql.connector.connect(user='root', password='1234', database='tianchi')
+	cursor = cnx.cursor()
+	end_date = datetime.date(2014, 12, 16)
+	timelist = list()
+	time_to_subtract = [0,2,6,14,30]
+	for t in time_to_subtract:
+		temp_date = end_date - datetime.timedelta(days=t)
+		timelist.append(temp_date)
+	feat = genFeature('38185963','73335740',end_date,timelist,cursor)
+	print feat
+	cursor.close()
+	cnx.close()
+	with open("t1.txt", "w") as fw:
+		fw.write('38185963,73335740,'+','.join([str(i) for i in feat])+"\n")
+	with open("t1.txt", "r") as f:
+		for row in f:
+			row=row.strip().split(',')
+			feat = [float(i) for i in row[2:]]
+			print feat
+	'''

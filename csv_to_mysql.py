@@ -35,6 +35,14 @@ def csvToMysql():
 	cursor.close()
 
 def createTrainData(filename, splitdate):
+	itemdict = dict()
+	with open('tianchi_mobile_recommend_train_item.csv', "r") as f:
+		next(f)
+		for row in f:
+			row = row.strip().split(',')
+			if row[0] not in itemdict:
+				itemdict[row[0]] = 1
+
 	posdict = dict()
 	negdict = dict()
 	with open("tianchi_mobile_recommend_train_user.csv", "r") as f:
@@ -42,20 +50,22 @@ def createTrainData(filename, splitdate):
 			line = row.strip().split(',')
 			datatime = line[5].split(' ')[0]
 			node = line[0]+","+line[1]+","+line[2]
-			if datatime == splitdate:
+			nodeid = line[0]+"_"+line[1]
+			if datatime == splitdate and line[1] in itemdict:
 				if int(line[2]) == 4:
-					if node not in posdict:
-						posdict[node] = 1
+					if nodeid not in posdict:
+						posdict[nodeid] = node
 				else:
-					if node not in negdict:
-						negdict[node] = 1
+					if nodeid not in negdict:
+						negdict[nodeid] = node
 	poslist = list(); neglist = list()
 	endlist = list()
 	for k in posdict:
-		poslist.append(k)
-		endlist.append(k)
+		poslist.append(posdict[k])
+		endlist.append(posdict[k])
 	for k in negdict:
-		neglist.append(k)
+		if k not in posdict:
+			neglist.append(negdict[k])
 	print len(posdict)
 	print len(poslist)
 	print len(negdict)
@@ -68,6 +78,7 @@ def createTrainData(filename, splitdate):
 	with open(filename, "w") as fw:
 		for i in endlist:
 			fw.write(i+"\n")
+
 '''
 def createTestData(isSample=True):
 	posdict = dict()
@@ -125,20 +136,23 @@ def createTestData(isSample=True):
 			line = row.strip().split(',')
 			datatime = line[5].split(' ')[0]
 			node = line[0]+","+line[1]+","+line[2]
+			nodeid = line[0]+"_"+line[1]
 			if datatime == '2014-12-18' and line[1] in itemlist:
+			#if datatime == '2014-12-18':
 				if int(line[2]) == 4:
-					if node not in posdict:
-						posdict[node] = 1
+					if nodeid not in posdict:
+						posdict[nodeid] = node
 				else:
-					if node not in negdict:
-						negdict[node] = 1
+					if nodeid not in negdict:
+						negdict[nodeid] = node
 	poslist = list(); neglist = list()
 	endlist = list()
 	for k in posdict:
-		poslist.append(k)
-		endlist.append(k)
+		poslist.append(posdict[k])
+		endlist.append(posdict[k])
 	for k in negdict:
-		neglist.append(k)
+		if k not in posdict:
+			neglist.append(negdict[k])
 	print len(posdict)
 	print len(poslist)
 	print len(negdict)
@@ -276,8 +290,76 @@ def sampleData():
 			for p in poslist:
 				fw.write(p)
 
+
+'''
+itemlist = dict()
+with open("tianchi_mobile_recommend_train_item.csv", "r") as f:
+	next(f)
+	for line in f:
+		line = line.strip().split(',')
+		itemlist[line[0]] = 0
+
+posdict = dict()
+negdict = dict()
+tempdict = dict()
+with open("tianchi_mobile_recommend_train_user.csv", "r") as f:
+	next(f)
+	for row in f:
+		line = row.strip().split(',')
+		datatime = line[5].split(' ')[0]
+		node = line[0]+","+line[1]
+		if datatime == '2014-12-18' and line[1] in itemlist:
+			if node not in tempdict:
+				tempdict[node] = 1
+split_date = datetime.date(2014, 12, 10)
+end_date = datetime.date(2014, 12, 18)
+predictuseritem = dict()
+userbuylist = dict()
+with open("tianchi_mobile_recommend_train_user.csv", "r") as f:
+	next(f)
+	for row in f:
+		line = row.strip().split(',')
+		datatime = line[5].split(' ')[0]
+		node = line[0]+","+line[1]
+		wnode = line[0]+","+line[1]+","+line[2]
+		pytime = line[5].split(" ")[0]
+		ntime = datetime.datetime.strptime(pytime, '%Y-%m-%d').date()
+		if node in tempdict and ntime > split_date and ntime < end_date:
+			if int(line[2]) == 4:
+				userbuylist[node] = 1
+			else:
+				predictuseritem[node] = wnode
+endlist = list()
+for key in predictuseritem:
+	if key not in userbuylist:
+		endlist.append(predictuseritem[key])
+
+print "test number is:",len(endlist)
+shuffle(endlist)
+with open("offline_test_data_7day.csv", "w") as fw:
+	for i in endlist:
+		fw.write(i+"\n")
+'''
+
 if __name__ == "__main__":
 	#createTrainData('offline_train_data.csv', '2014-12-17')
-	#createTrainData('online_train_data.csv', '2014-12-18')
+	createTrainData('online_train_data.csv', '2014-12-18')
 	#createTestData(False)
-	createToBePredictedData()
+	#createToBePredictedData()
+	'''
+	t = dict()
+	filename = "online_test_data.csv"
+	with open(filename, "r") as f:
+		for row in f:
+			row=row.strip().split(',')
+			node=row[0]+"_"+row[1]
+			if node not in t:
+				t[node]=1
+			else:
+				t[node]+=1
+	num = 0
+	for k in t:
+		if t[k]>1:
+			num+=1
+	print filename, num
+	'''
