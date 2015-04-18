@@ -79,46 +79,36 @@ def createTrainData(filename, splitdate):
 		for i in endlist:
 			fw.write(i+"\n")
 
-'''
-def createTestData(isSample=True):
-	posdict = dict()
-	negdict = dict()
+def createTestData(isSample=False):
+	preditemlist = dict()
+	with open("tianchi_mobile_recommend_train_item.csv", "r") as f:
+		next(f)
+		for line in f:
+			line = line.strip().split(',')
+			preditemlist[line[0]] = 0
+	
+	userbuylist = dict()
+	predictuseritem = dict()
 	with open("tianchi_mobile_recommend_train_user.csv", "r") as f:
-		for row in f.readlines():
-			line = row.strip().split(',')
-			datatime = line[5].split(' ')[0]
-			node = line[0]+","+line[1]+","+line[2]
-			if datatime == '2014-12-18':
-				if int(line[2]) == 4:
-					if node not in posdict:
-						posdict[node] = 1
-				else:
-					if node not in negdict:
-						negdict[node] = 1
-	poslist = list(); neglist = list()
-	endlist = list()
-	for k in posdict:
-		poslist.append(k)
-		endlist.append(k)
-	for k in negdict:
-		neglist.append(k)
-	print len(posdict)
-	print len(poslist)
-	print len(negdict)
-	print len(neglist)
-	if isSample:
-		X_train, newneglist = cross_validation.train_test_split(neglist, test_size=0.1)
-		print len(newneglist)
-		endlist.extend(newneglist)
-	else:
-		endlist.extend(neglist)
-	print "test number is:",len(endlist)
-	shuffle(endlist)
+		next(f)
+		for row in f:
+			row = row.strip().split(',')
+			node = row[0]+","+row[1]
+			datatime = row[5].split(' ')[0]
+			if datatime != '2014-12-18' and row[1] in preditemlist:
+				if int(row[2]) == 4:
+					userbuylist[node] = 1
+				if node not in predictuseritem:
+					predictuseritem[node] = 1
+	useritem = list()
+	for node in predictuseritem:
+		if node not in userbuylist:
+			useritem.append(node)
+	shuffle(useritem)
 	with open("offline_test_data.csv", "w") as fw:
-		for i in endlist:
-			fw.write(i+"\n")
+		for node in useritem:
+			fw.write(node+"\n")
 '''
-
 #预测商品子集
 def createTestData(isSample=True):
 	itemlist = dict()
@@ -168,7 +158,7 @@ def createTestData(isSample=True):
 	with open("offline_test_data_in_p.csv", "w") as fw:
 		for i in endlist:
 			fw.write(i+"\n")
-
+'''
 '''
 def createToBePredictedData():
 	preditemlist = dict()
@@ -343,23 +333,36 @@ with open("offline_test_data_7day.csv", "w") as fw:
 
 if __name__ == "__main__":
 	#createTrainData('offline_train_data.csv', '2014-12-17')
-	createTrainData('online_train_data.csv', '2014-12-18')
+	#createTrainData('online_train_data.csv', '2014-12-18')
 	#createTestData(False)
 	#createToBePredictedData()
-	'''
-	t = dict()
-	filename = "online_test_data.csv"
-	with open(filename, "r") as f:
+	templist = list()
+	with open("offline_test_data.csv","r") as f:
 		for row in f:
-			row=row.strip().split(',')
-			node=row[0]+"_"+row[1]
-			if node not in t:
-				t[node]=1
-			else:
-				t[node]+=1
-	num = 0
-	for k in t:
-		if t[k]>1:
-			num+=1
-	print filename, num
-	'''
+			templist.append(row)
+	X_train, y_train = cross_validation.train_test_split(templist, test_size=0.2)
+	traindict = dict(); testdict = dict()
+	with open("offline_test_data_80.csv","w") as fw:
+		for i in X_train:
+			fw.write(i)
+			line = i.strip().split(',')
+			node = line[0]+"_"+line[1]
+			traindict[node] = 1
+	with open("offline_test_data_20.csv","w") as fw:
+		for i in y_train:
+			fw.write(i)
+			line = i.strip().split(',')
+			node = line[0]+"_"+line[1]
+			testdict[node] = 1
+	with open("testdata_feature_offline_80.csv","w") as fw8:
+		with open("testdata_feature_offline_20.csv","w") as fw2:
+			with open("testdata_feature_offline.csv","r") as f:
+				for row in f:
+					line = row.strip().split(',')
+					node = line[0]+"_"+line[1]
+					if node in traindict:
+						fw8.write(row)
+					else:
+						fw2.write(row) 
+
+
