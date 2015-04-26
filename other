@@ -40,7 +40,7 @@ item feature: 4
 
 
 
-create table trainuser_all(
+create table trainuser_new(
  id int(11) NOT NULL AUTO_INCREMENT,
  userid varchar(20) NOT NULL,
  itemid varchar(20) NOT NULL,
@@ -52,3 +52,11 @@ create table trainuser_all(
  hour varchar(2) NOT NULL,
  PRIMARY KEY (id)
 );
+
+create index index_user_behavior_time on trainuser_new (userid,behavior,pytime);
+create index index_user_time on trainuser_new (userid,pytime);
+create index index_user_behavior on trainuser_new (userid,behavior);
+
+create index index_item_behavior_time on trainuser_new (itemid,behavior,pytime);
+create index index_user_item_behavior_time on trainuser_new (userid,itemid,behavior,pytime);
+create index index_user_item_behavior on trainuser_new (userid,itemid,behavior);

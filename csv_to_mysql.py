@@ -10,7 +10,7 @@ import datetime
 def csvToMysql():
 	cnx = mysql.connector.connect(user='root', password='1234', database='tianchi')
 	cursor = cnx.cursor()
-	add_newline = ("INSERT INTO trainuser_all "
+	add_newline = ("INSERT INTO trainuser_new "
                "(userid, itemid, behavior, usergeohash, itemcategory, oritime, pytime, hour) "
                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)")
 	'''
@@ -46,12 +46,13 @@ def createTrainData(filename, splitdate):
 	posdict = dict()
 	negdict = dict()
 	with open("tianchi_mobile_recommend_train_user.csv", "r") as f:
-		for row in f.readlines():
+		next(f)
+		for row in f:
 			line = row.strip().split(',')
-			datatime = line[5].split(' ')[0]
+			dttime = line[5].split(' ')[0]
 			node = line[0]+","+line[1]+","+line[2]
 			nodeid = line[0]+"_"+line[1]
-			if datatime == splitdate and line[1] in itemdict:
+			if dttime == splitdate and line[1] in itemdict:
 				if int(line[2]) == 4:
 					if nodeid not in posdict:
 						posdict[nodeid] = node
@@ -71,14 +72,14 @@ def createTrainData(filename, splitdate):
 	print len(negdict)
 	print len(neglist)
 	number =  (len(poslist)*10) / float(len(neglist))
-	X_train, newneglist = cross_validation.train_test_split(neglist, test_size=number)
+	X_train, newneglist = cross_validation.train_test_split(neglist, test_size=number,random_state=60)
 	print len(newneglist)
 	endlist.extend(newneglist)
 	shuffle(endlist)
 	with open(filename, "w") as fw:
 		for i in endlist:
 			fw.write(i+"\n")
-
+'''
 def createTestData(isSample=False):
 	preditemlist = dict()
 	with open("tianchi_mobile_recommend_train_item.csv", "r") as f:
@@ -94,8 +95,8 @@ def createTestData(isSample=False):
 		for row in f:
 			row = row.strip().split(',')
 			node = row[0]+","+row[1]
-			datatime = row[5].split(' ')[0]
-			if datatime != '2014-12-18' and row[1] in preditemlist:
+			dttime = row[5].split(' ')[0]
+			if dttime != '2014-12-18' and dttime != '2014-12-12' and row[1] in preditemlist:
 				if int(row[2]) == 4:
 					userbuylist[node] = 1
 				if node not in predictuseritem:
@@ -109,27 +110,25 @@ def createTestData(isSample=False):
 		for node in useritem:
 			fw.write(node+"\n")
 '''
-#预测商品子集
-def createTestData(isSample=True):
-	itemlist = dict()
+def createTestData(isSample=False):
+	preditemlist = dict()
 	with open("tianchi_mobile_recommend_train_item.csv", "r") as f:
 		next(f)
 		for line in f:
 			line = line.strip().split(',')
-			itemlist[line[0]] = 0
-
+			preditemlist[line[0]] = 0
+	
 	posdict = dict()
 	negdict = dict()
 	with open("tianchi_mobile_recommend_train_user.csv", "r") as f:
 		next(f)
 		for row in f:
-			line = row.strip().split(',')
-			datatime = line[5].split(' ')[0]
-			node = line[0]+","+line[1]+","+line[2]
-			nodeid = line[0]+"_"+line[1]
-			if datatime == '2014-12-18' and line[1] in itemlist:
-			#if datatime == '2014-12-18':
-				if int(line[2]) == 4:
+			row = row.strip().split(',')
+			nodeid = row[0]+","+row[1]
+			node = row[0]+","+row[1]+","+row[2]
+			dttime = row[5].split(' ')[0]
+			if dttime == '2014-12-18' and row[1] in preditemlist:
+				if int(row[2]) == 4:
 					if nodeid not in posdict:
 						posdict[nodeid] = node
 				else:
@@ -147,18 +146,10 @@ def createTestData(isSample=True):
 	print len(poslist)
 	print len(negdict)
 	print len(neglist)
-	if isSample:
-		X_train, newneglist = cross_validation.train_test_split(neglist, test_size=0.1)
-		print len(newneglist)
-		endlist.extend(newneglist)
-	else:
-		endlist.extend(neglist)
-	print "test number is:",len(endlist)
-	shuffle(endlist)
 	with open("offline_test_data_in_p.csv", "w") as fw:
-		for i in endlist:
-			fw.write(i+"\n")
-'''
+		for node in endlist:
+			fw.write(node+"\n")
+
 '''
 def createToBePredictedData():
 	preditemlist = dict()
@@ -204,15 +195,21 @@ def createToBePredictedData():
 	
 	userbuylist = dict()
 	predictuseritem = dict()
+	number = 0
 	with open("tianchi_mobile_recommend_train_user.csv", "r") as f:
 		next(f)
 		for row in f:
 			row = row.strip().split(',')
 			node = row[0]+","+row[1]
-			if int(row[2]) == 4:
-				userbuylist[node] = 1
-			if row[1] in preditemlist and node not in predictuseritem:
-				predictuseritem[node] = 1
+			dttime = row[5].split(' ')[0]
+			if dttime != '2014-12-12':
+				if int(row[2]) == 4:
+					userbuylist[node] = 1
+				if row[1] in preditemlist and node not in predictuseritem:
+					predictuseritem[node] = 1
+			else:
+				number += 1
+	print number
 	useritem = list()
 	for node in predictuseritem:
 		if node not in userbuylist:
@@ -222,120 +219,12 @@ def createToBePredictedData():
 		for node in useritem:
 			fw.write(node+"\n")
 
-def createItemList():
-	itemlist = dict()
-	with open("tianchi_mobile_recommend_train_user.csv") as f:
-		for row in f.readlines():
-			row = row.strip().split(',')
-			if row[1] not in itemlist:
-				itemlist[row[1]] = 1
-	with open("item.txt","w") as fw:	
-		for key in itemlist:
-			fw.write(key+"\n")
-
-def createUserList():
-	userlist = dict()
-	with open("tianchi_mobile_recommend_train_user.csv") as f:
-		for row in f.readlines():
-			row = row.strip().split(',')
-			if row[0] not in userlist:
-				userlist[row[0]] = 1
-	with open("user.txt","w") as fw:	
-		for key in userlist:
-			fw.write(key+"\n")
-
-def sampleData():
-	poslist = list()
-	neglist = list()
-	posdict = dict()
-	negdict = dict()
-	with open("tianchi_mobile_recommend_train_user.csv", "r") as f:
-		next(f)
-		for line in f:
-			row = line.strip().split(',')
-			if int(row[2]) == 4:
-				if line not in posdict:
-					posdict[line] = 1
-				#poslist.append(line)
-			else:
-				if line not in negdict:
-					negdict[line] = 1
-				#neglist.append(line)
-	for k in posdict:
-		poslist.append(k)
-	for k in negdict:
-		neglist.append(k)
-	print "end create pos and neg list"
-	print len(poslist)
-	print len(neglist)
-	X_train, newneglist = cross_validation.train_test_split(neglist, test_size=0.13)
-	print len(newneglist)
-	with open("train_data.csv", "w") as fw:
-		for num, n in enumerate(newneglist):
-			if num % 10 == 0 and len(poslist) != 0:
-				temp = poslist.pop()
-				fw.write(temp)
-			fw.write(n)
-		if len(poslist) != 0:
-			for p in poslist:
-				fw.write(p)
-
-
-'''
-itemlist = dict()
-with open("tianchi_mobile_recommend_train_item.csv", "r") as f:
-	next(f)
-	for line in f:
-		line = line.strip().split(',')
-		itemlist[line[0]] = 0
-
-posdict = dict()
-negdict = dict()
-tempdict = dict()
-with open("tianchi_mobile_recommend_train_user.csv", "r") as f:
-	next(f)
-	for row in f:
-		line = row.strip().split(',')
-		datatime = line[5].split(' ')[0]
-		node = line[0]+","+line[1]
-		if datatime == '2014-12-18' and line[1] in itemlist:
-			if node not in tempdict:
-				tempdict[node] = 1
-split_date = datetime.date(2014, 12, 10)
-end_date = datetime.date(2014, 12, 18)
-predictuseritem = dict()
-userbuylist = dict()
-with open("tianchi_mobile_recommend_train_user.csv", "r") as f:
-	next(f)
-	for row in f:
-		line = row.strip().split(',')
-		datatime = line[5].split(' ')[0]
-		node = line[0]+","+line[1]
-		wnode = line[0]+","+line[1]+","+line[2]
-		pytime = line[5].split(" ")[0]
-		ntime = datetime.datetime.strptime(pytime, '%Y-%m-%d').date()
-		if node in tempdict and ntime > split_date and ntime < end_date:
-			if int(line[2]) == 4:
-				userbuylist[node] = 1
-			else:
-				predictuseritem[node] = wnode
-endlist = list()
-for key in predictuseritem:
-	if key not in userbuylist:
-		endlist.append(predictuseritem[key])
-
-print "test number is:",len(endlist)
-shuffle(endlist)
-with open("offline_test_data_7day.csv", "w") as fw:
-	for i in endlist:
-		fw.write(i+"\n")
-'''
-
 if __name__ == "__main__":
-	#createTrainData('offline_train_data.csv', '2014-12-17')
+	#createTrainData('offline_train_data_6.csv', '2014-12-17')
 	#createTrainData('online_train_data.csv', '2014-12-18')
 	#createTestData(False)
 	#createToBePredictedData()
+	'''
 	templist = list()
 	with open("offline_test_data.csv","r") as f:
 		for row in f:
@@ -364,5 +253,104 @@ if __name__ == "__main__":
 						fw8.write(row)
 					else:
 						fw2.write(row) 
+	'''
+	
+	with open("testdata_feature_offline_pre_by_other.txt", "w") as fw:
+		testdict = dict()
+		with open("offline_predict_data.txt", "r") as f:
+			for row in f:
+				row = row.strip().split(',')
+				if float(row[2]) > 0.5:
+					node = row[0]+"_"+row[1]
+					testdict[node] = 1
+		with open("testdata_feature_offline_post.csv", "r") as f:
+			for row in f:
+				line = row.strip().split(',')
+				node = line[0]+"_"+line[1]
+				if node in testdict:
+					fw.write(row)
+	
+	'''
+	offline = dict()
+	with open("offline_test_data_in_p.csv","r") as f:
+		for row in f:
+			row = row.strip().split(',')
+			if int(row[2]) == 4:
+				node = row[0]+"_"+row[1]
+				offline[node] = 1	
+	rfdict = dict()
+	with open("offline_predict_rf.txt", "r") as f:
+		for row in f:
+			row = row.strip().split(',')
+			node = row[0]+"_"+row[1]
+			if float(row[2]) > 0.5 and node in offline:
+				rfdict[node] = 1
+	lrdict = dict()
+	with open("offline_predict.txt", "r") as f:
+		for row in f:
+			row = row.strip().split(',')
+			node = row[0]+"_"+row[1]
+			if float(row[2]) > 0.5 and node in offline:
+				lrdict[node] = 1	
+	number = 0
+	for key in rfdict:
+		if key in lrdict:
+			number+=1
+	print "rf number: "+str(len(rfdict))
+	print "lr number: "+str(len(lrdict))
+	print "interact number: "+str(number)
+	'''
+	'''
+	useritemlabel = dict()
+	with open("offline_predict.txt", "r") as f:
+		for row in f:
+			row = row.strip().split(',')
+			node = row[0]+"_"+row[1]
+			if float(row[2]) > 0.5:
+				useritemlabel[node] = 1
+			else:
+				useritemlabel[node] = 0
 
+	inuseritem = dict()
+	inuseritem_a = dict()
+	with open("offline_test_data_in_p.csv","r") as f:
+		for row in f:
+			row = row.strip().split(',')
+			node = row[0]+"_"+row[1]
+			if int(row[2]) == 4:
+				inuseritem[node]=1
+				if row[0] not in inuseritem_a:
+					inuseritem_a[row[0]] = 1
 
+	number_1 = 0 
+	number_2 = 0 
+	number_3 = 0 
+	number_4 = 0
+	userdict = dict();posnum=0;negnum=0
+	tempa = 0
+	with open("newdata/traindata_feature_offline.csv","r") as f:
+		for row in f:
+			row=row.strip().split(',')
+			feat = [float(n) for n in row[2:]]
+			node = row[0]+"_"+row[1]
+			tempnum = feat[4]
+			if tempnum > 500:
+				number_1+=1
+				if row[0] not in userdict:
+					userdict[row[0]] = 1
+				if node in inuseritem:
+					posnum +=1
+				if row[0] in inuseritem_a:
+					tempa+=1
+			elif tempnum>300 and tempnum<=500:
+				number_2+=1
+			elif tempnum>100 and tempnum<=300:
+				number_3+=1
+			else:
+				number_4+=1
+	print number_1,number_2,number_3,number_4
+	print len(userdict)
+	print posnum,negnum
+	print tempa
+	'''
+	
